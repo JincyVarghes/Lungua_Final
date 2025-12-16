@@ -1,4 +1,3 @@
-
 name: Deploy to GitHub Pages
 
 on:
@@ -23,15 +22,17 @@ jobs:
           node-version: '20'
 
       - name: Install Dependencies
+        working-directory: Lungua_Final
         run: npm install
 
       - name: Build App
+        working-directory: Lungua_Final
         run: npm run build
 
       - name: Upload Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist
+          path: Lungua_Final/dist
 
   deploy:
     environment:
@@ -43,3 +44,4 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
