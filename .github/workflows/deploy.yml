@@ -10,27 +10,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1️⃣ Checkout the repository
-    - name: Checkout Code
-      uses: actions/checkout@v3
+      # 1️⃣ Checkout repository
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-    # 2️⃣ Setup Node.js (make sure version matches your project)
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
+      # 2️⃣ Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
 
-    # 3️⃣ Install dependencies
-    - name: Install Dependencies
-      run: npm install
-      working-directory: ./  # <-- set to root of your repo
+      # 3️⃣ Install dependencies (POINT TO PACKAGE.JSON FOLDER)
+      - name: Install Dependencies
+        run: npm install
+        working-directory: ./langua-project/langua-project
 
-    # 4️⃣ Build the app
-    - name: Build App
-      run: npm run build
-      working-directory: ./  # <-- set to root of your repo
+      # 4️⃣ Build the app
+      - name: Build App
+        run: npm run build
+        working-directory: ./langua-project/langua-project
 
-    # 5️⃣ Optional: Deploy (for GitHub Pages or Vercel)
-    # Replace this with your actual deployment commands
-    - name: Deploy
-      run: echo "Add your deploy commands here"
+      # 5️⃣ Deploy placeholder (build verification step)
+      - name: Deploy
+        run: echo "Build successful. Ready for deployment."
