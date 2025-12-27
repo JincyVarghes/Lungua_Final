@@ -12,20 +12,20 @@ jobs:
     steps:
       # 1️⃣ Checkout repository
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # 2️⃣ Setup Node.js
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18
 
       # 3️⃣ Install dependencies
       - name: Install dependencies
+        working-directory: ./Lungua_Project
         run: npm install
-        working-directory: ./Lungua-Project
 
-      # 4️⃣ Build the project
+      # 4️⃣ Build project
       - name: Build project
+        working-directory: ./Lungua_Project
         run: npm run build
-        working-directory: ./Lungua-Project
