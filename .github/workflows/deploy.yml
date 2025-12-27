@@ -6,12 +6,12 @@ on:
       - main
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout the repository
-      - name: Checkout Code
+      # 1️⃣ Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v3
 
       # 2️⃣ Setup Node.js
@@ -20,14 +20,16 @@ jobs:
         with:
           node-version: 18
 
-      # 3️⃣ Install dependencies (IMPORTANT: correct folder)
-      - name: Install Dependencies
-        run: |
-          cd langua-project/langua-project
-          npm install
+      # 3️⃣ Install dependencies (CORRECT folder)
+      - name: Install dependencies
+        working-directory: ./Lungua/Lungua-project
+        run: npm install
 
-      # 4️⃣ Build the app
-      - name: Build App
-        run: |
-          cd langua-project/langua-project
-          npm run build
+      # 4️⃣ Build app
+      - name: Build app
+        working-directory: ./Lungua/Lungua-project
+        run: npm run build
+
+      # 5️⃣ Deployment placeholder
+      - name: Deploy
+        run: echo "Build successful — deployment step can be added here"
