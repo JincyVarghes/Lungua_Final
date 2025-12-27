@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,16 +20,12 @@ jobs:
         with:
           node-version: 18
 
-      # 3️⃣ Install dependencies (CORRECT folder)
+      # 3️⃣ Install dependencies
       - name: Install dependencies
-        working-directory: ./Lungua/Lungua-project
         run: npm install
+        working-directory: ./Lungua-Project
 
-      # 4️⃣ Build app
-      - name: Build app
-        working-directory: ./Lungua/Lungua-project
+      # 4️⃣ Build the project
+      - name: Build project
         run: npm run build
-
-      # 5️⃣ Deployment placeholder
-      - name: Deploy
-        run: echo "Build successful — deployment step can be added here"
+        working-directory: ./Lungua-Project
