@@ -31,16 +31,19 @@ const Patient = mongoose.model("Patient", patientSchema);
 
 // GET /api/patients - test if route works
 app.get("/api/patients", (req, res) => {
+  console.log("GET /api/patients hit"); // logs request in Render
   res.json({ message: "GET works" });
 });
 
 // POST /api/patients - add a patient
 app.post("/api/patients", async (req, res) => {
+  console.log("POST /api/patients hit:", req.body); // logs request in Render
   try {
     const patient = new Patient(req.body);
     await patient.save();
-    res.status(201).json({ message: "Patient added", patient });
+    res.status(201).json({ message: "Patient added successfully", patient });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: error.message });
   }
 });
