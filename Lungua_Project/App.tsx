@@ -10,10 +10,6 @@ import { CaregiverPage } from './pages/CaregiverPage';
 import { useBleDevice } from './hooks/useBleDevice';
 import type { ChartDataPoint, AnomalyStatus, AnomalyLogEntry, Page, LocationShareState, CaregiverData } from './types';
 
-// ---------------- BACKEND CONFIG ----------------
-const BASE_URL = "https://lungua-final-3.onrender.com"; // <-- Replace with your Render URL
-
-// Add type definitions for the Web Bluetooth API to the global Navigator interface.
 declare global {
   interface Navigator {
     bluetooth: any;
@@ -21,11 +17,10 @@ declare global {
 }
 
 const MAX_DATA_POINTS = 150; 
-const SIMULATION_INTERVAL_MS = 50; // 20Hz update rate
+const SIMULATION_INTERVAL_MS = 50;
 const MAX_ANOMALY_LOGS = 5;
 const LOCATION_SHARE_DELAY_MS = 300000; // 5 minutes
 
-// --- Helper Functions ---
 const parseHeartRate = (value: DataView): number => {
   const flags = value.getUint8(0);
   const is16Bit = (flags & 0x1) !== 0;
@@ -40,31 +35,26 @@ const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<Page>('dashboard');
 
-  // --- Data State ---
   const [heartRateHistory, setHeartRateHistory] = useState<ChartDataPoint[]>([]);
   const [airflowHistory, setAirflowHistory] = useState<ChartDataPoint[]>([]);
-  
   const [anomalyStatus, setAnomalyStatus] = useState<AnomalyStatus>('Normal');
   const [anomalyMessage, setAnomalyMessage] = useState<string>('');
   const [anomalyHistory, setAnomalyHistory] = useState<AnomalyLogEntry[]>([]);
-  
   const [sslReconstructionError, setSslReconstructionError] = useState<number>(0);
+
   const [showNotification, setShowNotification] = useState<boolean>(false);
   const [notificationMessage, setNotificationMessage] = useState<string>('');
   const notificationTimeoutRef = useRef<number | null>(null);
 
-  // --- Configuration State ---
   const [highHeartRateThreshold, setHighHeartRateThreshold] = useState<number>(130);
   const [elevatedHeartRateThreshold, setElevatedHeartRateThreshold] = useState<number>(100);
   const [highAirflowThreshold, setHighAirflowThreshold] = useState<number>(70);
 
-  // --- Simulation State ---
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
   const simulationIntervalRef = useRef<number | null>(null);
   const simTimeRef = useRef<number>(0); 
   const simulationConditionRef = useRef<'normal' | 'attack'>('normal');
 
-  // --- Location Sharing State ---
   const [isLocationSharingEnabled, setIsLocationSharingEnabled] = useState<boolean>(false);
   const [locationShareState, setLocationShareState] = useState<LocationShareState>('idle');
   const [locationShareCountdown, setLocationShareCountdown] = useState<number>(LOCATION_SHARE_DELAY_MS / 1000);
@@ -76,7 +66,6 @@ const App: React.FC = () => {
   const latestHeartRate = useRef<number>(75);
   const latestAirflow = useRef<number>(20);
 
-  // --- Caregiver Data ---
   const [caregiverData, setCaregiverData] = useState<CaregiverData>({
     name: 'Dr. Evelyn Reed',
     relationship: 'Primary Pulmonologist',
@@ -88,44 +77,6 @@ const App: React.FC = () => {
   const [isPairingModalOpen, setIsPairingModalOpen] = useState(false);
   const [pairingDeviceName, setPairingDeviceName] = useState('');
 
-  // --- Backend Integration ---
-  const sendLogToBackend = async (type: string, msg: string, hr: number, flow: number, ssl: number) => {
-      try {
-          const response = await fetch(`${BASE_URL}/api/patients`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                  name: "Test Patient",
-                  age: 25,
-                  caregiverPhone: "1234567890",
-                  anomalyType: type,
-                  message: msg,
-                  heartRate: hr,
-                  airflow: flow,
-                  sslError: ssl
-              })
-          });
-          const data = await response.json();
-          console.log("[BACKEND SYNC] Response:", data);
-      } catch (err) {
-          console.error("[BACKEND ERROR]", err);
-      }
-  };
-
-  const fetchPatients = async () => {
-      try {
-          const res = await fetch(`${BASE_URL}/api/patients`);
-          const data = await res.json();
-          console.log("[PATIENTS FETCHED]", data);
-      } catch (err) {
-          console.error("[FETCH ERROR]", err);
-      }
-  };
-
-  useEffect(() => {
-      fetchPatients(); // optional: run on load for testing
-  }, []);
-
   // --- Notification ---
   const triggerNotification = (msg: string) => {
       setNotificationMessage(msg);
@@ -134,13 +85,32 @@ const App: React.FC = () => {
       notificationTimeoutRef.current = window.setTimeout(() => setShowNotification(false), 5000);
   };
 
+  // --- UPDATED Backend Sync Function ---
+  const sendLogToBackend = async (type: string, msg: string, hr: number, flow: number, ssl: number) => {
+      try {
+          const res = await fetch('https://<your-backend-url>/api/patients', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  name: type,
+                  age: hr,
+                  caregiverPhone: caregiverData.phone,
+                  extraInfo: { message: msg, airflow: flow, sslError: ssl }
+              }),
+          });
+          const data = await res.json();
+          console.log('[BACKEND SYNC SUCCESS]', data);
+      } catch (err) {
+          console.error('[BACKEND SYNC ERROR]', err);
+      }
+  };
+
   const sendAlertToBackend = async (lat: number, lng: number) => {
       console.log(`[SMS GATEWAY] Sending alert to ${caregiverData.phone}`);
       console.log(`[SMS CONTENT] EMERGENCY: Anomaly Detected. Location: https://maps.google.com/?q=${lat},${lng}`);
       triggerNotification(`SMS Sent to ${caregiverData.name}: "Emergency assistance required."`);
   };
 
-  // --- Audio Beep System ---
   const playBeep = useCallback((type: 'alert' | 'critical') => {
     if (!audioContextRef.current) {
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -171,67 +141,197 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // --- Edge Inference Engine & Data Updates ---
+  useEffect(() => {
+    let beepInterval: number | null = null;
+    if (locationShareState === 'countingDown') {
+        playBeep('critical');
+        beepInterval = window.setInterval(() => playBeep('critical'), 1000);
+    }
+    return () => { if (beepInterval) clearInterval(beepInterval); };
+  }, [locationShareState, playBeep]);
+
+  // --- EDGE AI INFERENCE ENGINE ---
   const runEdgeInference = useCallback((currentHeartRate: number, currentAirflow: number) => {
-      let newStatus: AnomalyStatus = 'Normal';
-      let newMessage = '';
-      let newAnomalyType = '';
+    let newStatus: AnomalyStatus = 'Normal';
+    let newMessage = '';
+    let newAnomalyType = '';
 
-      const MODEL_WEIGHTS = { HR_MEAN: 75, HR_STD: 10, FLOW_MEAN: 20, FLOW_STD: 5 };
+    const MODEL_WEIGHTS = { HR_MEAN: 75, HR_STD: 10, FLOW_MEAN: 20, FLOW_STD: 5 };
+    const hrFeature = (currentHeartRate - MODEL_WEIGHTS.HR_MEAN) / MODEL_WEIGHTS.HR_STD;
+    const flowFeature = (currentAirflow - MODEL_WEIGHTS.FLOW_MEAN) / MODEL_WEIGHTS.FLOW_STD;
+    const latentDeviation = Math.sqrt(Math.pow(hrFeature, 2) + Math.pow(flowFeature, 2));
+    const reconstructionErrorPercent = Math.min(100, Math.max(0, (latentDeviation / 4) * 100));
+    setSslReconstructionError(reconstructionErrorPercent);
 
-      const hrFeature = (currentHeartRate - MODEL_WEIGHTS.HR_MEAN) / MODEL_WEIGHTS.HR_STD;
-      const flowFeature = (currentAirflow - MODEL_WEIGHTS.FLOW_MEAN) / MODEL_WEIGHTS.FLOW_STD;
-      const latentDeviation = Math.sqrt(hrFeature**2 + flowFeature**2);
-      const reconstructionErrorPercent = Math.min(100, Math.max(0, (latentDeviation / 4) * 100));
-      setSslReconstructionError(reconstructionErrorPercent);
+    if (currentHeartRate > elevatedHeartRateThreshold && currentAirflow < 12) {
+      newStatus = 'Anomaly Detected';
+      newAnomalyType = 'Narrow Airway';
+      newMessage = `Airway constriction signature matched (Confidence: ${Math.round(reconstructionErrorPercent)}%). Inhaler required.`;
+    } else if (currentHeartRate > highHeartRateThreshold) {
+      newStatus = 'Anomaly Detected';
+      newAnomalyType = 'Tachycardia';
+      newMessage = `Heart Rate deviation > 2σ from baseline.`;
+    } else if (currentAirflow > highAirflowThreshold) {
+      newStatus = 'Anomaly Detected';
+      newAnomalyType = 'Flow Anomaly';
+      newMessage = `Inhaler technique outside normal distribution.`;
+    }
 
-      if (currentHeartRate > elevatedHeartRateThreshold && currentAirflow < 12) {
-          newStatus = 'Anomaly Detected'; newAnomalyType = 'Narrow Airway';
-          newMessage = `Airway constriction matched (${Math.round(reconstructionErrorPercent)}%)`;
-      } else if (currentHeartRate > highHeartRateThreshold) {
-          newStatus = 'Anomaly Detected'; newAnomalyType = 'Tachycardia';
-          newMessage = `Heart Rate > 2σ from baseline`;
-      } else if (currentAirflow > highAirflowThreshold) {
-          newStatus = 'Anomaly Detected'; newAnomalyType = 'Flow Anomaly';
-          newMessage = `Inhaler technique outside normal`;
-      }
+    setAnomalyStatus(prev => {
+        if (prev !== newStatus && newStatus === 'Anomaly Detected') {
+             setAnomalyHistory(h => [{
+                timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
+                type: newAnomalyType,
+                message: newMessage
+             }, ...h].slice(0, MAX_ANOMALY_LOGS));
 
-      setAnomalyStatus(prev => {
-          if (prev !== newStatus && newStatus === 'Anomaly Detected') {
-              setAnomalyHistory(h => [{
-                  timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
-                  type: newAnomalyType,
-                  message: newMessage
-              }, ...h].slice(0, MAX_ANOMALY_LOGS));
-              sendLogToBackend(newAnomalyType, newMessage, currentHeartRate, currentAirflow, reconstructionErrorPercent);
-              setAnomalyMessage(newMessage);
-              triggerNotification(newMessage);
-              playBeep('alert');
-          } else if (newStatus === 'Normal') {
-              setAnomalyMessage('');
-          }
-          return newStatus;
-      });
-      return { newStatus, newMessage };
+             sendLogToBackend(newAnomalyType, newMessage, currentHeartRate, currentAirflow, reconstructionErrorPercent);
+
+             setAnomalyMessage(newMessage);
+             triggerNotification(newMessage);
+             playBeep('alert');
+        } else if (newStatus === 'Normal') {
+            setAnomalyMessage('');
+        }
+        return newStatus;
+    });
+
+    return { newStatus, newMessage };
   }, [highHeartRateThreshold, elevatedHeartRateThreshold, highAirflowThreshold, playBeep]);
 
   const updateDataHistories = useCallback((hrValue: number, afValue: number) => {
-      latestHeartRate.current = hrValue;
-      latestAirflow.current = afValue;
-      const now = new Date();
-      const timeLabel = `${now.getMinutes()}:${now.getSeconds().toString().padStart(2,'0')}.${Math.floor(now.getMilliseconds()/100)}`;
-      setHeartRateHistory(prev => [...prev, { time: timeLabel, value: hrValue }].slice(-MAX_DATA_POINTS));
-      setAirflowHistory(prev => [...prev, { time: timeLabel, value: afValue }].slice(-MAX_DATA_POINTS));
-      runEdgeInference(hrValue, afValue);
+    latestHeartRate.current = hrValue;
+    latestAirflow.current = afValue;
+    const now = new Date();
+    const timeLabel = `${now.getMinutes()}:${now.getSeconds().toString().padStart(2, '0')}.${Math.floor(now.getMilliseconds()/100)}`;
+    setHeartRateHistory(prev => [...prev, { time: timeLabel, value: hrValue }].slice(-MAX_DATA_POINTS));
+    setAirflowHistory(prev => [...prev, { time: timeLabel, value: afValue }].slice(-MAX_DATA_POINTS));
+    runEdgeInference(hrValue, afValue);
 
-      if (locationShareState === 'countingDown' && afValue > 25) cancelLocationShare('inhalerUsed');
+    if (locationShareState === 'countingDown' && afValue > 25) cancelLocationShare('inhalerUsed');
   }, [runEdgeInference, locationShareState]);
 
-  // --- BLE devices, simulation, location sharing, render helpers remain unchanged ---
-  // All your original code below stays exactly the same, no UI logic touched.
+  // --- BLE Hooks ---
+  const smartwatch = useBleDevice({
+      deviceName: 'Smartwatch',
+      serviceUUID: 'heart_rate', 
+      characteristicUUID: 'heart_rate_measurement', 
+      parseValue: parseHeartRate,
+      onDataReceived: (val) => updateDataHistories(val, latestAirflow.current)
+  });
 
-  // --- For brevity, you can replace your original `sendLogToBackend` and top constants with these. ---
-  // Everything else in your `App.tsx` remains the same.
-};
+  const inhaler = useBleDevice({
+      deviceName: 'Smart Inhaler',
+      serviceUUID: '19b10000-e8f2-537e-4f6c-d104768a1214',
+      characteristicUUID: '19b10001-e8f2-537e-4f6c-d104768a1214',
+      parseValue: parseAirflow,
+      onDataReceived: (val) => updateDataHistories(latestHeartRate.current, val)
+  });
 
-export default App;
+  // --- Location Sharing & Simulation Logic ---
+  const cancelLocationShare = (reason: 'user' | 'inhalerUsed' = 'user') => {
+    if (locationTimerRef.current) clearTimeout(locationTimerRef.current);
+    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    setLocationShareState(reason === 'inhalerUsed' ? 'cancelledInhalerUse' : 'cancelled');
+    setTimeout(() => setLocationShareState(prev => (prev === 'cancelled' || prev === 'cancelledInhalerUse' ? 'idle' : prev)), 5000);
+  };
+
+  const startLocationShareCountdown = useCallback(() => {
+    if (locationShareState !== 'idle') return;
+    const mockLocation = () => {
+        setUserLocation({ latitude: 12.9716, longitude: 77.5946 });
+        setLocationShareState('countingDown');
+        setLocationShareCountdown(LOCATION_SHARE_DELAY_MS / 1000);
+
+        countdownIntervalRef.current = window.setInterval(() => setLocationShareCountdown(prev => prev > 0 ? prev - 1 : 0), 1000);
+        locationTimerRef.current = window.setTimeout(() => {
+             setLocationShareState('sent');
+             sendAlertToBackend(12.9716, 77.5946);
+             if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+             setTimeout(() => setLocationShareState('idle'), 5000);
+        }, LOCATION_SHARE_DELAY_MS);
+    };
+
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                setUserLocation({ latitude: position.coords.latitude, longitude: position.coords.longitude });
+                setLocationShareState('countingDown');
+                setLocationShareCountdown(LOCATION_SHARE_DELAY_MS / 1000);
+                countdownIntervalRef.current = window.setInterval(() => setLocationShareCountdown(prev => prev > 0 ? prev - 1 : 0), 1000);
+                locationTimerRef.current = window.setTimeout(() => {
+                    setLocationShareState('sent');
+                    sendAlertToBackend(position.coords.latitude, position.coords.longitude);
+                    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+                    setTimeout(() => setLocationShareState('idle'), 5000);
+                }, LOCATION_SHARE_DELAY_MS);
+            },
+            (error) => {
+                console.warn("Geolocation error, using Mock:", error);
+                mockLocation();
+            }
+        );
+    } else { mockLocation(); }
+  }, [locationShareState]);
+
+  useEffect(() => {
+      if (anomalyStatus === 'Anomaly Detected' && 
+         (anomalyMessage.includes('Airway') || anomalyMessage.includes('Tachycardia')) && 
+         isLocationSharingEnabled && locationShareState === 'idle') {
+          startLocationShareCountdown();
+      }
+  }, [anomalyStatus, anomalyMessage, isLocationSharingEnabled, locationShareState, startLocationShareCountdown]);
+
+  const startSimulation = () => {
+    if (smartwatch.status === 'Connected' || inhaler.status === 'Connected') {
+      alert('Please disconnect real devices first.');
+      return;
+    }
+    setIsSimulating(true);
+    simTimeRef.current = 0;
+    simulationConditionRef.current = 'normal';
+  };
+  const stopSimulation = () => setIsSimulating(false);
+  const toggleSimulationCondition = () => { simulationConditionRef.current = simulationConditionRef.current === 'normal' ? 'attack' : 'normal'; };
+
+  useEffect(() => {
+    if (!isSimulating) { if (simulationIntervalRef.current) clearInterval(simulationIntervalRef.current); return; }
+    simulationIntervalRef.current = window.setInterval(() => {
+        simTimeRef.current += SIMULATION_INTERVAL_MS / 1000;
+        const time = simTimeRef.current;
+        const respPhase = time * 2 * Math.PI * 0.25;
+        let hrBase = simulationConditionRef.current === 'attack' ? 135 : 75;
+        let afBase = simulationConditionRef.current === 'attack' ? 8 : 20;
+        const afVariability = simulationConditionRef.current === 'attack' ? 2 : 15;
+        const afNoise = (Math.random() - 0.5) * 2;
+        const newAf = afBase + (Math.sin(respPhase) * afVariability) + afNoise;
+        const clampedAf = Math.max(0, newAf);
+        const hrRSAMagnitude = simulationConditionRef.current === 'attack' ? 2 : 5;
+        const hrNoise = (Math.random() - 0.5) * 3;
+        const newHr = hrBase + Math.sin(respPhase) * hrRSAMagnitude + hrNoise;
+        updateDataHistories(newHr, clampedAf);
+    }, SIMULATION_INTERVAL_MS);
+    return () => { if (simulationIntervalRef.current) clearInterval(simulationIntervalRef.current); };
+  }, [isSimulating, updateDataHistories]);
+
+  const handleLogout = () => {
+      smartwatch.disconnect();
+      inhaler.disconnect();
+      stopSimulation();
+      setIsAuthenticated(false);
+      setHeartRateHistory([]);
+      setAirflowHistory([]);
+  };
+
+  const handleConnectClick = (type: 'smartwatch' | 'inhaler') => {
+      setPairingDeviceName(type === 'smartwatch' ? 'Smartwatch' : 'Smart Inhaler');
+      setIsPairingModalOpen(true);
+      if (type === 'smartwatch') smartwatch.connect().finally(() => setIsPairingModalOpen(false));
+      else inhaler.connect().finally(() => setIsPairingModalOpen(false));
+  };
+
+  const LocationSharerBanner = () => {
+    if (locationShareState === 'idle') return null;
+    const bannerContent = {
+        pendingPermission: { bg: 'bg-slate-800', border: 'border-slate-600', text: 'text-slate-300', icon: <MapPinIcon className="h-6 w-6 animate-pulse" />, title: 'Checking Location...', message: 'Acquiring GPS coordinates.', cancel: false },
+        countingDown: { bg: 'bg-red-900', border: 'border-red-500', text: 'text-red-200', icon: <LungsIcon className="h-6 w-6 text-red-300 animate-bounce" />, title: 'Use In
