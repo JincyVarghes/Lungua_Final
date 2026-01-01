@@ -334,4 +334,51 @@ const App: React.FC = () => {
     if (locationShareState === 'idle') return null;
     const bannerContent = {
         pendingPermission: { bg: 'bg-slate-800', border: 'border-slate-600', text: 'text-slate-300', icon: <MapPinIcon className="h-6 w-6 animate-pulse" />, title: 'Checking Location...', message: 'Acquiring GPS coordinates.', cancel: false },
-        countingDown: { bg: 'bg-red-900', border: 'border-red-500', text: 'text-red-200', icon: <LungsIcon className="h-6 w-6 text-red-300 animate-bounce" />, title: 'Use In
+        countingDown: { bg: 'bg-red-900', border: 'border-red-500', text: 'text-red-200', icon: <LungsIcon className="h-6 w-6 text-red-300 animate-bounce" />, title: 'Use Inhaler!', message: `SMS will be sent in ${locationShareCountdown}s`, cancel: true },
+        sent: { bg: 'bg-green-900', border: 'border-green-500', text: 'text-green-200', icon: <CloudIcon className="h-6 w-6 animate-bounce" />, title: 'Alert Sent', message: `SMS sent to ${caregiverData.name}`, cancel: false },
+        cancelled: { bg: 'bg-slate-900', border: 'border-slate-600', text: 'text-slate-300', icon: <WarningIcon className="h-6 w-6 animate-pulse" />, title: 'Cancelled', message: 'Location sharing cancelled.', cancel: false },
+        cancelledInhalerUse: { bg: 'bg-slate-900', border: 'border-slate-600', text: 'text-slate-300', icon: <WarningIcon className="h-6 w-6 animate-pulse" />, title: 'Cancelled', message: 'Location sharing cancelled due to inhaler use.', cancel: false }
+    }[locationShareState];
+    return (
+        <div className={`absolute top-2 left-1/2 -translate-x-1/2 border-l-4 ${bannerContent.border} ${bannerContent.bg} p-3 rounded-md flex gap-3 items-center`}>
+            {bannerContent.icon}
+            <div>
+                <div className={`font-semibold ${bannerContent.text}`}>{bannerContent.title}</div>
+                <div className={`text-sm ${bannerContent.text}`}>{bannerContent.message}</div>
+            </div>
+            {bannerContent.cancel && <button onClick={() => cancelLocationShare()} className="ml-auto p-1 bg-slate-700 rounded-md text-slate-100">Cancel</button>}
+        </div>
+    );
+  };
+
+  if (!isAuthenticated) return <LoginPage onLogin={() => setIsAuthenticated(true)} />;
+
+  return (
+      <div className="relative min-h-screen bg-slate-900 text-slate-100">
+          <Header onLogout={handleLogout} />
+          <LocationSharerBanner />
+          <DashboardMockup
+              heartRateData={heartRateHistory}
+              airflowData={airflowHistory}
+              anomalyStatus={anomalyStatus}
+              anomalyMessage={anomalyMessage}
+              onStartSimulation={startSimulation}
+              onStopSimulation={stopSimulation}
+              onToggleSimulation={toggleSimulationCondition}
+              isSimulating={isSimulating}
+          />
+          <div className="grid grid-cols-2 gap-4 p-4">
+              <DeviceConnectionCard name="Smartwatch" status={smartwatch.status} onConnect={() => handleConnectClick('smartwatch')} />
+              <DeviceConnectionCard name="Smart Inhaler" status={inhaler.status} onConnect={() => handleConnectClick('inhaler')} />
+          </div>
+          {isPairingModalOpen && <PairingGuideModal deviceName={pairingDeviceName} />}
+          {showNotification && (
+              <div className="fixed bottom-5 left-1/2 -translate-x-1/2 bg-indigo-700 text-white p-3 rounded shadow-lg">
+                  {notificationMessage}
+              </div>
+          )}
+      </div>
+  );
+};
+
+export default App;
