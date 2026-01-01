@@ -2,54 +2,78 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 
+console.log("Starting Lungua backend...");
+
 const app = express();
 
-// Middleware
+/* =======================
+   Middleware
+======================= */
 app.use(cors());
 app.use(express.json());
 
-// MongoDB Connection
+/* =======================
+   MongoDB Connection
+======================= */
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB connected successfully"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
-// Test root route
+/* =======================
+   Health & Root Routes
+======================= */
 app.get("/", (req, res) => {
   res.send("ROOT OK");
 });
 
-// Patient schema
+app.get("/health", (req, res) => {
+  res.status(200).send("OK");
+});
+
+/* =======================
+   Patient Schema & Model
+======================= */
 const patientSchema = new mongoose.Schema({
-  name: String,
-  age: Number,
-  caregiverPhone: String,
+  name: { type: String, required: true },
+  age: { type: Number, required: true },
+  caregiverPhone: { type: String, required: true },
   createdAt: { type: Date, default: Date.now }
 });
 
 const Patient = mongoose.model("Patient", patientSchema);
 
-// GET /api/patients - test if route works
-app.get("/api/patients", (req, res) => {
-  console.log("GET /api/patients hit"); // logs request in Render
+/* =======================
+   API Routes
+======================= */
+const router = express.Router();
+
+/* Test GET */
+router.get("/patients", (req, res) => {
   res.json({ message: "GET works" });
 });
 
-// POST /api/patients - add a patient
-app.post("/api/patients", async (req, res) => {
-  console.log("POST /api/patients hit:", req.body); // logs request in Render
+/* Add Patient */
+router.post("/patients", async (req, res) => {
   try {
     const patient = new Patient(req.body);
     await patient.save();
-    res.status(201).json({ message: "Patient added successfully", patient });
+    res.status(201).json({
+      message: "Patient added successfully",
+      patient
+    });
   } catch (error) {
-    console.error(error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Start server
+app.use("/api", router);
+
+/* =======================
+   Start Server
+======================= */
 const PORT = process.env.PORT || 5000;
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
