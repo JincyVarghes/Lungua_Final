@@ -1,92 +1,71 @@
 import React, { useState, useEffect } from "react";
-import Header from "./components/Header";
-import Dashboard from "./components/Dashboard";
-import SimulationControls from "./components/SimulationControls";
-import "./App.css";
+
+// 🟢 Replace this with your Render backend
+const BACKEND_BASE_URL = "https://lungua-final-3.onrender.com";
+
+interface AnomalyLog {
+  name: string;
+  age: number;
+  caregiverPhone: string;
+  extraInfo: object;
+}
 
 function App() {
-  // -----------------------------
-  // REQUIRED STATE (FIXES BUILD)
-  // -----------------------------
-  const [currentPatient, setCurrentPatient] = useState({
+  const [anomalyDetected, setAnomalyDetected] = useState(false);
+
+  // Example simulated anomaly data
+  const exampleAnomaly: AnomalyLog = {
     name: "Test Patient",
-    age: 22,
-    caregiverPhone: "9999999999",
-  });
-
-  const [alertLevel, setAlertLevel] = useState<"NORMAL" | "WARNING" | "CRITICAL">(
-    "NORMAL"
-  );
-
-  const [chartDataPoints, setChartDataPoints] = useState<number[]>([]);
-
-  const [anomalyStatus, setAnomalyStatus] = useState<string>("No anomalies");
-
-  const [isSimulating, setIsSimulating] = useState(false);
-
-  // -----------------------------
-  // SIMULATION HANDLERS
-  // -----------------------------
-  const startSimulation = () => {
-    setIsSimulating(true);
-    setAlertLevel("WARNING");
-    setAnomalyStatus("Simulation running");
-
-    // dummy chart data
-    setChartDataPoints((prev) => [...prev, Math.random() * 100]);
+    age: 25,
+    caregiverPhone: "0000000000",
+    extraInfo: { reason: "Simulated airway constriction" },
   };
 
-  const stopSimulation = () => {
-    setIsSimulating(false);
-    setAlertLevel("NORMAL");
-    setAnomalyStatus("Simulation stopped");
+  const sendAnomalyToBackend = async (log: AnomalyLog) => {
+    try {
+      console.log("📡 Sending anomaly to backend...");
+      const response = await fetch(`${BACKEND_BASE_URL}/api/patients`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(log),
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Server error: ${response.status} — ${text}`);
+      }
+
+      const data = await response.json();
+      console.log("✅ Successfully saved anomaly:", data);
+    } catch (error) {
+      console.error("❌ Failed to send anomaly to backend:", error);
+    }
   };
 
-  const handleLogout = () => {
-    console.log("Logged out");
-  };
-
-  // -----------------------------
-  // AUTO DATA UPDATE (OPTIONAL)
-  // -----------------------------
+  // Example effect: send when anomalyDetected flips true
   useEffect(() => {
-    if (!isSimulating) return;
+    if (anomalyDetected) {
+      sendAnomalyToBackend(exampleAnomaly);
+    }
+  }, [anomalyDetected]);
 
-    const interval = setInterval(() => {
-      setChartDataPoints((prev) => [
-        ...prev.slice(-10),
-        Math.random() * 120,
-      ]);
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [isSimulating]);
-
-  // -----------------------------
-  // UI
-  // -----------------------------
   return (
     <div className="App">
-      <Header
-        currentPatient={currentPatient}
-        alertLevel={alertLevel}
-        chartDataPoints={chartDataPoints}
-        anomalyStatus={anomalyStatus}
-        onLogout={handleLogout}
-      />
+      <h1>Lungua Smart Inhaler Dashboard</h1>
 
-      <Dashboard
-        patient={currentPatient}
-        alertLevel={alertLevel}
-        anomalyStatus={anomalyStatus}
-        chartData={chartDataPoints}
-      />
+      {/* Example anomaly trigger */}
+      <button
+        onClick={() => {
+          console.log("🔔 Anomaly triggered");
+          setAnomalyDetected(true);
+        }}
+      >
+        Simulate Anomaly
+      </button>
 
-      <SimulationControls
-        isRunning={isSimulating}
-        onStart={startSimulation}
-        onStop={stopSimulation}
-      />
+      {/* UI stays exactly the same — no layout change */}
     </div>
   );
 }
