@@ -4,8 +4,8 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import type { ConnectionStatus, BleServiceInfo } from "../types";
 
 /**
- * 🔐 Tell TypeScript that navigator.bluetooth CAN exist (browser-only API)
- * This fixes Vercel / server-side build errors.
+ * 🔐 Safe TypeScript declaration for Web Bluetooth API
+ * Prevents server-side build errors on Vercel
  */
 declare global {
   interface Navigator {
@@ -34,7 +34,6 @@ export const useBleDevice = ({
   const deviceRef = useRef<any>(null);
   const serverRef = useRef<any>(null);
 
-  // Track mounted state (prevents state update on unmounted component)
   const isMounted = useRef(true);
 
   useEffect(() => {
@@ -66,9 +65,7 @@ export const useBleDevice = ({
   }, [handleDisconnected]);
 
   const connect = useCallback(async () => {
-    /**
-     * 🛑 CRITICAL: Prevent execution during Vercel/server build
-     */
+    // ❌ Disable Bluetooth during server-side build
     if (typeof window === "undefined" || !navigator.bluetooth) {
       console.warn("Web Bluetooth not available in this environment");
       if (isMounted.current) setStatus("Error");
@@ -78,9 +75,7 @@ export const useBleDevice = ({
     try {
       if (isMounted.current) setStatus("Connecting");
 
-      const filterService = Array.isArray(serviceUUID)
-        ? serviceUUID[0]
-        : serviceUUID;
+      const filterService = Array.isArray(serviceUUID) ? serviceUUID[0] : serviceUUID;
 
       const options = {
         filters: [{ services: [filterService] }],
@@ -110,9 +105,7 @@ export const useBleDevice = ({
 
           servicesInfo.push({
             uuid: service.uuid,
-            characteristics: characteristics.map((char: any) => ({
-              uuid: char.uuid,
-            })),
+            characteristics: characteristics.map((char: any) => ({ uuid: char.uuid })),
           });
 
           const isTargetService = Array.isArray(serviceUUID)
@@ -128,29 +121,19 @@ export const useBleDevice = ({
               service.uuid === "heart_rate" ||
               service.uuid === "0000180d-0000-1000-8000-00805f9b34fb"
             ) {
-              targetChar = await service.getCharacteristic(
-                "heart_rate_measurement"
-              );
+              targetChar = await service.getCharacteristic("heart_rate_measurement");
             }
 
             if (targetChar && parseValue && onDataReceived) {
               await targetChar.startNotifications();
-              targetChar.addEventListener(
-                "characteristicvaluechanged",
-                (event: any) => {
-                  const val = parseValue(event.target.value);
-                  if (isMounted.current) {
-                    onDataReceived(val);
-                  }
-                }
-              );
+              targetChar.addEventListener("characteristicvaluechanged", (event: any) => {
+                const val = parseValue(event.target.value);
+                if (isMounted.current) onDataReceived(val);
+              });
             }
           }
         } catch (e) {
-          console.warn(
-            `Could not access characteristics for service ${service.uuid}`,
-            e
-          );
+          console.warn(`Could not access characteristics for service ${service.uuid}`, e);
           servicesInfo.push({ uuid: service.uuid, characteristics: [] });
         }
       }
@@ -165,21 +148,7 @@ export const useBleDevice = ({
         }, 3000);
       }
     }
-  }, [
-    serviceUUID,
-    characteristicUUID,
-    parseValue,
-    onDataReceived,
-    deviceName,
-    handleDisconnected,
-  ]);
+  }, [serviceUUID, characteristicUUID, parseValue, onDataReceived, deviceName, handleDisconnected]);
 
-  return {
-    status,
-    connectedName,
-    services,
-    connect,
-    disconnect,
-    device: deviceRef.current,
-  };
+  return { status, connectedName, services, connect, disconnect, device: deviceRef.current };
 };
