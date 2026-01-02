@@ -11,7 +11,11 @@ export interface ChartDataPoint {
   value: number;
 }
 
-export type ConnectionStatus = 'Disconnected' | 'Connecting' | 'Connected' | 'Error';
+export type ConnectionStatus =
+  | 'Disconnected'
+  | 'Connecting'
+  | 'Connected'
+  | 'Error';
 
 export type AnomalyStatus = 'Normal' | 'Anomaly Detected';
 
@@ -30,9 +34,21 @@ export interface AnomalyLogEntry {
   message: string;
 }
 
+/**
+ * ⚠️ IMPORTANT
+ * Page values are LOWERCASE.
+ * This fixes the Vercel error you were seeing.
+ */
 export type Page = 'dashboard' | 'profile' | 'caregiver';
 
-export type LocationShareState = 'idle' | 'pendingPermission' | 'countingDown' | 'permissionDenied' | 'sent' | 'cancelled' | 'cancelledInhalerUse';
+export type LocationShareState =
+  | 'idle'
+  | 'pendingPermission'
+  | 'countingDown'
+  | 'permissionDenied'
+  | 'sent'
+  | 'cancelled'
+  | 'cancelledInhalerUse';
 
 export interface CaregiverData {
   name: string;
@@ -40,8 +56,8 @@ export interface CaregiverData {
   email: string;
   phone: string;
   notifications: {
-      push: boolean;
-      sms: boolean;
-      email: boolean;
-  }
+    push: boolean;
+    sms: boolean;
+    email: boolean;
+  };
 }
