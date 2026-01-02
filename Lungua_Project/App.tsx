@@ -1,25 +1,30 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Header } from './components/Header';
 import { DashboardMockup } from './components/DashboardMockup';
-import { CaregiverPage } from './pages/CaregiverPage';
-import { LoginPage } from './pages/LoginPage';
-import { UserProfilePage } from './pages/UserProfilePage';
 import { useBleDevice } from './hooks/useBleDevice';
-import type { ChartDataPoint, AnomalyLogEntry, AnomalyStatus } from './types';
+import type { ChartDataPoint, AnomalyStatus, Page } from './types';
 
 const BASE_URL = "https://lungua-final-3.onrender.com";
 
-// Example Anomaly Log Type
+interface AnomalyExtraInfo {
+  reason: string;
+  [key: string]: any;
+}
+
 interface AnomalyLog {
   name: string;
   age: number;
   caregiverPhone: string;
-  extraInfo: object;
+  extraInfo: AnomalyExtraInfo;
 }
 
 export const App: React.FC = () => {
   const [anomalyDetected, setAnomalyDetected] = useState(false);
   const [latestAnomalyLog, setLatestAnomalyLog] = useState<AnomalyLog | null>(null);
+
+  const [currentPage, setCurrentPage] = useState<Page>("Dashboard");
+  const handleNavigate = (page: Page) => setCurrentPage(page);
+  const handleLogout = () => console.log("Logout triggered");
 
   const { status: bleStatus, connect, disconnect } = useBleDevice({
     deviceName: "SmartInhaler",
@@ -65,13 +70,17 @@ export const App: React.FC = () => {
 
   return (
     <div className="App">
-      <Header />
+      <Header
+        currentPage={currentPage}
+        onNavigate={handleNavigate}
+        onLogout={handleLogout}
+      />
 
       <DashboardMockup
         heartRateData={[]}
         airflowData={[]}
-        anomalyStatus={anomalyDetected ? "Anomaly Detected" : "System Nominal"}
-        anomalyMessage={latestAnomalyLog ? latestAnomalyLog.extraInfo.reason : ""}
+        anomalyStatus={anomalyDetected ? "Anomaly Detected" : "Normal"}
+        anomalyMessage={latestAnomalyLog?.extraInfo.reason || ""}
         sslReconstructionError={0}
       />
     </div>
