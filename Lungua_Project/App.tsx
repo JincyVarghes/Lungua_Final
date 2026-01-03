@@ -5,7 +5,6 @@ import { LoginPage } from './pages/LoginPage';
 import type {
   ChartDataPoint,
   AnomalyStatus,
-  AnomalyLogEntry,
   Page,
   CaregiverData
 } from './types';
@@ -32,6 +31,7 @@ const App: React.FC = () => {
   const [airflowHistory, setAirflowHistory] = useState<ChartDataPoint[]>([]);
   const [anomalyStatus, setAnomalyStatus] = useState<AnomalyStatus>('Normal');
   const [anomalyMessage, setAnomalyMessage] = useState('');
+  const [sslReconstructionError, setSslReconstructionError] = useState(12);
 
   /* ================= SIMULATION ================= */
   const [isSimulating, setIsSimulating] = useState(false);
@@ -81,10 +81,12 @@ const App: React.FC = () => {
     if (hr > 100 && flow < 12) {
       setAnomalyStatus('Anomaly Detected');
       setAnomalyMessage('Airway constriction detected');
+      setSslReconstructionError(82);
       sendLogToBackend('Narrow Airway', 'Airway constriction detected', hr, flow);
     } else {
       setAnomalyStatus('Normal');
       setAnomalyMessage('');
+      setSslReconstructionError(15);
     }
   }, []);
 
@@ -99,5 +101,48 @@ const App: React.FC = () => {
 
       runInference(hr, flow);
 
-      setHeartRateHistory(prev => [...prev, { x: Date.now(), y: hr }].slice(-150));
-      setAirflowHistory(prev => [...prev, { x: Date.now(), y: flow }].slice(-150));
+      setHeartRateHistory(prev =>
+        [...prev, { time: Date.now().toString(), value: hr }].slice(-150)
+      );
+
+      setAirflowHistory(prev =>
+        [...prev, { time: Date.now().toString(), value: flow }].slice(-150)
+      );
+    }, SIMULATION_INTERVAL_MS);
+
+    return () => {
+      if (simulationIntervalRef.current) {
+        clearInterval(simulationIntervalRef.current);
+      }
+    };
+  }, [isSimulating, runInference]);
+
+  /* ================= UI ================= */
+  if (!isAuthenticated) {
+    return <LoginPage onLogin={() => setIsAuthenticated(true)} />;
+  }
+
+  return (
+    <div className="min-h-screen bg-dark-background text-dark-text-primary">
+      <Header
+        currentPage={currentPage}
+        onNavigate={setCurrentPage}
+        onLogout={() => setIsAuthenticated(false)}
+      />
+
+      <main className="p-6">
+        {currentPage === 'dashboard' && (
+          <DashboardMockup
+            heartRateData={heartRateHistory}
+            airflowData={airflowHistory}
+            anomalyStatus={anomalyStatus}
+            anomalyMessage={anomalyMessage}
+            sslReconstructionError={sslReconstructionError}
+          />
+        )}
+      </main>
+    </div>
+  );
+};
+
+export default App;
