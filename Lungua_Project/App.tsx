@@ -18,10 +18,12 @@ declare global {
 }
 
 // Increased significantly for smoother "medical monitor" sweep feel
+// Increased significantly for smoother "medical monitor" sweep feel
 const MAX_DATA_POINTS = 150; 
 const SIMULATION_INTERVAL_MS = 50; // 20Hz update rate
 const MAX_ANOMALY_LOGS = 5;
-const LOCATION_SHARE_DELAY_MS = 300000; // 5 minutes exactly as per requirement
+const LOCATION_SHARE_DELAY_MS = 120000; // 2 minutes
+
 
 // --- Helper Functions ---
 const parseHeartRate = (value: DataView): number => {
@@ -584,3 +586,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+
